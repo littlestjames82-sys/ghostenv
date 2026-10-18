@@ -15,6 +15,8 @@ from .scanner import scan_project
 
 
 def _norm(name: str) -> str:
+    """Normalise a name for case-mismatch pairing: upper-case it
+    and treat ``-`` and ``_`` as the same separator."""
     return name.upper().replace("-", "_")
 
 
@@ -45,6 +47,15 @@ def _case_mismatches(sets: dict[str, set[str]]) -> list[dict]:
 
 
 def build_report(project, env_file=None, example_file=None) -> dict:
+    """Scan *project* and build the full names-only report dict.
+
+    ``env_file`` / ``example_file`` override the defaults
+    (``<project>/.env`` and the first example candidate in the
+    project root). The returned dict is the JSON report shape:
+    name sets, usages, findings grouped by classification,
+    counts, ``blocking_reasons``, a one-line ``verdict``, and the
+    matching ``exit_code`` (0 complete, 1 blocking findings).
+    """
     project = Path(project)
     config = load_config(project)
     external = set(config.get("external") or [])

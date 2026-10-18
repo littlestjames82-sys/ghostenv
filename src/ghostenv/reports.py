@@ -3,6 +3,8 @@ from __future__ import annotations
 
 
 def render_text(report: dict) -> str:
+    """Render a ``check`` report as grouped, human-readable text
+    ending with the verdict and the names-only statement."""
     c = report["counts"]
     out = []
     out.append(f"GhostEnv check: {report['project']}")
@@ -53,6 +55,8 @@ def render_text(report: dict) -> str:
 
 
 def render_scan_text(report: dict) -> str:
+    """Render a ``scan`` report as text: each name used in code
+    with its first read site, plus any dynamic read sites."""
     out = [f"GhostEnv scan: {report['project']}",
            "Used in code:"]
     usages: dict[str, list] = {}

@@ -8,7 +8,9 @@ the next person (or the next agent run) finds out at runtime.
 GhostEnv is the doctor for that. It compares three name sets:
 
 1. names the code uses (`os.environ` / `os.getenv` in Python,
-   `process.env` in JS/TS, and similar patterns),
+   `process.env` in JS/TS, `os.Getenv` in Go, `env::var` in Rust,
+   shell `$NAME`, and parser-lite Ruby `ENV[...]` / `ENV.fetch`
+   and Java/Kotlin `System.getenv` / Spring `@Value("${...}")`),
 2. names defined in `.env`,
 3. names documented in `.env.example`,
 
@@ -51,21 +53,42 @@ PYTHONPATH=src python3 -m ghostenv --help
 ```
 
 Requires Python 3.10 or newer. The shipped CLI's `--help` is the
-authority for exact subcommand spelling; the common shapes are:
+authority for exact subcommand spelling and flags
+(`ghostenv --help`, `ghostenv check --help`, and so on).
+
+## Which command do I want?
+
+| Command | Question it answers | Writes anything? |
+|---|---|---|
+| `ghostenv scan <project>` | Which names does the code read? | No |
+| `ghostenv check <project>` | Do code, `.env`, and the example file agree on names? | No |
+| `ghostenv example <project>` | What would a clean, names-only `.env.example` look like? | Only the example file it names |
+
+Start with `check` for a project you already have; use `scan`
+when you only want the code side, and `example` when the check
+says the example file is missing or stale.
 
 ## Quickstart
 
 ```bash
+# Just the code side: names used, with file and line per read site
+ghostenv scan ~/my-project
+
 # Check a project: code usage vs .env vs .env.example
 ghostenv check ~/my-project
 echo $?   # 0 = no blocking findings, 1 = blocking findings
           # (the verdict line names exactly which), 2 = could
           # not scan
 
+# The same check as machine-readable JSON (names only, as always)
+ghostenv check ~/my-project --json
+
 # Generate a clean .env.example (names + empty placeholders)
 ghostenv example ~/my-project -o ~/my-project/.env.example.new
 # Review it, then rename it over the old example. GhostEnv never
 # modifies your real .env.
+# Prefer to look before writing anything? Preview instead:
+ghostenv example ~/my-project --stdout
 ```
 
 A worked walkthrough lives in [`examples/`](examples/README.md).
@@ -101,6 +124,42 @@ do not block on their own.
   `.env` and asserts it appears in no stdout, stderr, report, or
   generated file, ever.
 
+## Optional config: `.ghostenv.json`
+
+A project can carry an optional `.ghostenv.json` in its root.
+Only two keys are honoured, and both contain names and patterns
+only, never values:
+
+```json
+{
+  "external": ["PLATFORM_PROVIDED_NAME"],
+  "ignore": ["generated/*"]
+}
+```
+
+- `external`: names a host, CI system, or deployment platform
+  provides, so they will never appear in a local `.env`. They are
+  excluded from the missing checks and listed as external, so the
+  contract stays complete instead of crying wolf.
+- `ignore`: extra glob patterns for paths the scanner should
+  skip, matched against each file's project-relative path and
+  file name.
+
+The file is optional; a missing or unreadable one simply means
+no externals and no extra ignores.
+
+## Reading an exit code
+
+- `0`: the run finished; for `check`, no blocking findings.
+- `1`: `check` found blocking findings. The verdict line (and
+  `blocking_reasons` in `--json`) names exactly which categories
+  fired, so read that before hunting through the findings.
+- `2`: GhostEnv could not do the run at all: the project path is
+  not a directory, or `example` refused to overwrite an existing
+  example file. For the refusal, re-run with `-o <path>` to write
+  elsewhere, `--stdout` to preview, or `--force` to overwrite on
+  purpose.
+
 ## Limits
 
 - Static scanning finds name usage in the patterns it knows.
@@ -111,6 +170,12 @@ do not block on their own.
 - Reads mentioned in full-line comments are not counted, and
   reads inside string literals can be counted. Parser-lite,
   labelled as such.
+- Ruby and Java/Kotlin scanning is parser-lite throughout:
+  findings carry a `parser-lite` confidence marker. Defaults are
+  detected structurally only (a fetch/getOrDefault argument, a
+  `||` / `?:` fallback, a fetch block, or the colon in a Spring
+  `${NAME:default}` placeholder); default text is never read
+  into any output, same as every other language.
 - A clean check is evidence that the three name sets agree. It
   is not proof an application will run: values can still be
   wrong, empty, or point at the wrong place, and GhostEnv

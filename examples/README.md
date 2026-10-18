@@ -21,6 +21,11 @@ GhostEnv never prints values from a real one.
 ## Walkthrough
 
 ```bash
+# 0. Scan: just the code side (names, file, and line per read)
+ghostenv scan examples/mini_project
+# Expected shape: DATABASE_URL, DEMO_API_KEY, and
+#    CACHE_TTL_SECONDS, each with its read site in app.py.
+
 # 1. Check: code usage vs .env vs .env.example (names only)
 ghostenv check examples/mini_project
 # Expected shape: exit 1. There is deliberately no real .env in
@@ -45,7 +50,28 @@ ghostenv check examples/mini_project \
 ghostenv example examples/mini_project -o /tmp/new.env.example
 # Expected shape: the generated file lists DATABASE_URL,
 #    DEMO_API_KEY, and CACHE_TTL_SECONDS with empty values.
+# Add --stdout instead of -o to preview without writing a file.
 ```
+
+## What a generated example looks like
+
+Names grouped by the prefix before the first underscore, one
+`NAME=` line each, every value empty. This is the whole shape;
+there is nothing else in the file to leak:
+
+```text
+# --- CACHE ---
+CACHE_TTL_SECONDS=
+
+# --- DATABASE ---
+DATABASE_URL=
+
+# --- DEMO ---
+DEMO_API_KEY=
+```
+
+(The real output also carries the GhostEnv header comment
+stating that the file contains names only.)
 
 Exact subcommand spelling follows the shipped CLI (`--help` is the
 authority); the test suite discovers it from help for the same

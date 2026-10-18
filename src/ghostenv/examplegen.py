@@ -15,6 +15,11 @@ HEADER = (
 
 
 def group_names(names) -> list[tuple[str, list[str]]]:
+    """Group *names* by the prefix before the first ``_``.
+
+    Returns ``[(prefix, [names]), ...]`` sorted by prefix, with
+    names that have no prefix last. Names are de-duplicated and
+    sorted inside each group."""
     groups: dict[str, list[str]] = {}
     for name in sorted(set(names)):
         prefix = name.split("_", 1)[0] if "_" in name else ""
@@ -25,6 +30,9 @@ def group_names(names) -> list[tuple[str, list[str]]]:
 
 
 def render_example(names) -> str:
+    """Render *names* as example-file text: the GhostEnv header,
+    then one ``NAME=`` line (empty value) per name, grouped by
+    prefix. Names in, text out - no file is read here."""
     lines = [HEADER.rstrip("\n"), ""]
     for prefix, group in group_names(names):
         if prefix:
