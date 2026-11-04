@@ -1,5 +1,6 @@
 # GhostEnv
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/littlestjames82-sys/ghostenv/actions/workflows/ci.yml/badge.svg)](https://github.com/littlestjames82-sys/ghostenv/actions/workflows/ci.yml/actions)
 
 **Are the names your code needs the names your .env actually has?**
 
